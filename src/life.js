@@ -11,33 +11,119 @@ type Neighbors = [
     Cell
 ];
 
+type Player = {
+    name: string
+};
+
+type PlayerCellsCounter = {
+    player: ?Player,
+    cellCount: number
+};
+
+class PlayerCellsCounters {
+    counters: PlayerCellsCounter[];
+
+    constructor(counters: PlayerCellsCounter[])
+    {
+        this.counters = counters;
+    }
+
+    initCounterForPlayer(player: Player): PlayerCellsCounters
+    {
+        if (this.getCounterForPlayer(player) !== null) {
+            return this;
+        }
+
+        return new PlayerCellsCounters(
+            this.counters.concat({
+                player,
+                cellCount: 0
+            })
+        )
+    }
+
+    getCounterForPlayer(player: Player): ?PlayerCellsCounter
+    {
+        let filteredCounters = this.counters.filter((currentCounter) => currentCounter.player == player);
+        if (filteredCounters.length === 1) {
+            return filteredCounters[0];
+        }
+
+        return null;
+    }
+
+    addCellForPlayer(player: ?Player): PlayerCellsCounters
+    {
+        if (player === null || player === undefined) {
+            return this;
+        }
+
+        return new PlayerCellsCounters(
+            this.initCounterForPlayer(player).counters.map(
+                (counter: PlayerCellsCounter) => (counter.player == player) ? { player, cellCount: counter.cellCount+1 } : counter
+            )
+        );
+    }
+
+    getHighestCellCountOwner(): ?Player
+    {
+        let maxCellCount = Math.max(...this.counters.map((currentCounter: PlayerCellsCounter) => currentCounter.cellCount));
+        let playersWithMaxCount = this.counters.filter((counter: PlayerCellsCounter) => counter.cellCount === maxCellCount);
+
+        if (playersWithMaxCount.length === 1) {
+            return playersWithMaxCount[0].player;
+        }
+
+        return null;
+    }
+}
+
 export class Cell {
 
     isAlive: bool;
+    owner: ?Player;
 
-    constructor(isAlive: bool){
+    constructor(isAlive: bool, owner: ?Player = null){
         this.isAlive = isAlive;
+        this.owner = owner;
     }
 
     nextState(neighbors: Neighbors): Cell
     {
-        const aliveNeighbors = neighbors.filter(cell => cell.isAlive);
+        const aliveNeighbors: Cell[] = neighbors.filter((cell: Cell) => cell.isAlive);
 
         if (aliveNeighbors.length === 2) return this;
 
-        if (aliveNeighbors.length === 3) return Cell.alive();
+        if (aliveNeighbors.length === 3) {
+            const counters: PlayerCellsCounters = aliveNeighbors.reduce(
+                (counters: PlayerCellsCounters, cell: Cell) => counters.addCellForPlayer(cell.owner),
+                new PlayerCellsCounters([])
+            );
+
+            return Cell.alive(counters.getHighestCellCountOwner());
+        }
 
         return Cell.dead();
     }
 
-    static alive(): Cell
+    isOwnedBy(owner: Player): bool
     {
-        return new Cell(true);
+        return this.owner == owner;
+    }
+
+    hasOwner(): bool
+    {
+        return this.owner !== null;
+    }
+
+    static alive(owner: ?Player = null): Cell
+    {
+        return new Cell(true, owner);
     }
 
     static dead(): Cell
     {
-        return new Cell(false);
+        return new Cell(false, null);
     }
 }
 
@@ -82,11 +168,11 @@ export class Grid {
         );
     }
 
-    hasAliveCells(): boolean
+    hasAliveCells(): bool
     {
         return this.cells.reduce(
-            (hasAliveCells: boolean, column: Cell[]) => column.reduce(
-                (hasAliveCells: boolean, cell: Cell) => hasAliveCells || cell.isAlive,
+            (hasAliveCells: bool, column: Cell[]) => column.reduce(
+                (hasAliveCells: bool, cell: Cell) => hasAliveCells || cell.isAlive,
                 false
             ),
             false

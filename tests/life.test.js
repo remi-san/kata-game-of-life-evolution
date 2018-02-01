@@ -127,4 +127,60 @@ describe('Grid tests', () => {
             ]).hasAliveCells()
         ).toBe(false);
     });
+
+    describe('Multiplayer tests', () => {
+        it('a live cell can be owned by a player', () => {
+            let owner = { name: 'owner' };
+            let cell = Cell.alive(owner);
+
+            expect(cell.isOwnedBy(owner)).toBe(true);
+        });
+
+        it('a live cell can be owned by nobody', () => {
+            let cell = Cell.alive();
+            expect(cell.hasOwner()).toBe(false);
+        });
+
+        it('when a cell is created, it belongs to the player owning most of the neighbors', () => {
+        
+            let playerOne = { name: 'Player 1' };
+            let playerTwo = { name: 'Player 2' };
+            let cell = Cell.dead();
+    
+            let nextStateCell = cell.nextState([
+                Cell.alive(playerOne),
+                Cell.alive(playerOne),
+                Cell.alive(playerTwo),
+                Cell.dead(),
+                Cell.dead(),
+                Cell.dead(),
+                Cell.dead(),
+                Cell.dead()
+            ]);
+    
+            expect(nextStateCell.isAlive).toBe(true);
+            expect(nextStateCell.isOwnedBy(playerOne)).toBe(true);
+        });
+    
+        it('when a cell is created, and there is no majority of players owning the neighbor cells, it is neutral', () => {
+            
+            let playerOne = { name: 'Player 1' };
+            let playerTwo = { name: 'Player 2' };
+            let cell = Cell.dead();
+    
+            let nextStateCell = cell.nextState([
+                Cell.alive(playerOne),
+                Cell.alive(playerTwo),
+                Cell.alive(),
+                Cell.dead(),
+                Cell.dead(),
+                Cell.dead(),
+                Cell.dead(),
+                Cell.dead()
+            ]);
+    
+            expect(nextStateCell.isAlive).toBe(true);
+            expect(nextStateCell.hasOwner()).toBe(false);
+        });
+    });
 });
