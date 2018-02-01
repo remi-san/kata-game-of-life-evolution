@@ -20,7 +20,7 @@ type PlayerCellsCounter = {
     cellCount: number
 };
 
-class PlayerCellsCounters {
+class PlayersCellsCounterCollection {
     counters: PlayerCellsCounter[];
 
     constructor(counters: PlayerCellsCounter[])
@@ -28,13 +28,13 @@ class PlayerCellsCounters {
         this.counters = counters;
     }
 
-    initCounterForPlayer(player: Player): PlayerCellsCounters
+    initCounterForPlayer(player: Player): PlayersCellsCounterCollection
     {
         if (this.getCounterForPlayer(player) !== null) {
             return this;
         }
 
-        return new PlayerCellsCounters(
+        return new PlayersCellsCounterCollection(
             this.counters.concat({
                 player,
                 cellCount: 0
@@ -52,20 +52,20 @@ class PlayerCellsCounters {
         return null;
     }
 
-    addCellForPlayer(player: ?Player): PlayerCellsCounters
+    addCellForPlayer(player: ?Player): PlayersCellsCounterCollection
     {
         if (player === null || player === undefined) {
             return this;
         }
 
-        return new PlayerCellsCounters(
+        return new PlayersCellsCounterCollection(
             this.initCounterForPlayer(player).counters.map(
                 (counter: PlayerCellsCounter) => (counter.player == player) ? { player, cellCount: counter.cellCount+1 } : counter
             )
         );
     }
 
-    getHighestCellCountOwner(): ?Player
+    getOnlyHighestCellCountOwner(): ?Player
     {
         let maxCellCount = Math.max(...this.counters.map((currentCounter: PlayerCellsCounter) => currentCounter.cellCount));
         let playersWithMaxCount = this.counters.filter((counter: PlayerCellsCounter) => counter.cellCount === maxCellCount);
@@ -95,12 +95,12 @@ export class Cell {
         if (aliveNeighbors.length === 2) return this;
 
         if (aliveNeighbors.length === 3) {
-            const counters: PlayerCellsCounters = aliveNeighbors.reduce(
-                (counters: PlayerCellsCounters, cell: Cell) => counters.addCellForPlayer(cell.owner),
-                new PlayerCellsCounters([])
+            const counters: PlayersCellsCounterCollection = aliveNeighbors.reduce(
+                (counters: PlayersCellsCounterCollection, cell: Cell) => counters.addCellForPlayer(cell.owner),
+                new PlayersCellsCounterCollection([])
             );
 
-            return Cell.alive(counters.getHighestCellCountOwner());
+            return Cell.alive(counters.getOnlyHighestCellCountOwner());
         }
 
         return Cell.dead();
